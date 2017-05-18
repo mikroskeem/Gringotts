@@ -23,7 +23,7 @@ import java.util.logging.Logger;
  */
 public class Migration {
 
-    private final EbeanServer db = Gringotts.G.getDatabase();
+    private final EbeanServer db = Gringotts.G.getGringottsDatabase();
     private final Logger log = Gringotts.G.getLogger();
 
     private final File gringottsFolder = Gringotts.G.getDataFolder();

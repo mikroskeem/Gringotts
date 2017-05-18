@@ -1,7 +1,15 @@
 package org.gestern.gringotts;
 
 import com.avaje.ebean.EbeanServer;
+import com.avaje.ebean.EbeanServerFactory;
+import com.avaje.ebean.config.DataSourceConfig;
+import com.avaje.ebean.config.ServerConfig;
+import com.avaje.ebean.config.dbplatform.SQLitePlatform;
+import com.avaje.ebeaninternal.api.SpiEbeanServer;
+import com.avaje.ebeaninternal.server.ddl.DdlGenerator;
+import com.avaje.ebeaninternal.server.lib.sql.TransactionIsolation;
 import net.milkbowl.vault.economy.Economy;
+import org.apache.commons.lang.Validate;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -20,12 +28,13 @@ import org.gestern.gringotts.data.Migration;
 import org.gestern.gringotts.event.AccountListener;
 import org.gestern.gringotts.event.PlayerVaultListener;
 import org.gestern.gringotts.event.VaultCreator;
-import org.mcstats.MetricsLite;
 
-import java.io.*;
+import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.Charset;
 import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.gestern.gringotts.Configuration.CONF;
@@ -54,9 +63,32 @@ public class Gringotts extends JavaPlugin {
      */
     public final AccountHolderFactory accountHolderFactory = new AccountHolderFactory();
 
+    /** Ebean */
+    private EbeanServer gringottsEbeanServer;
+
     @Override
     public void onEnable() {
+        /* Initialize EBean */
+        ServerConfig db = new ServerConfig();
 
+        db.setDefaultServer(false);
+        db.setRegister(false);
+        db.setClasses(getGringottsDatabaseClasses());
+        db.setName(this.getDescription().getName());
+        configureGringottsDbConfig(db);
+
+        DataSourceConfig ds = db.getDataSourceConfig();
+
+        ds.setUrl(replaceDatabaseString(ds.getUrl()));
+        this.getDataFolder().mkdirs();
+
+        ClassLoader previous = Thread.currentThread().getContextClassLoader();
+
+        Thread.currentThread().setContextClassLoader(this.getClassLoader());
+        gringottsEbeanServer = EbeanServerFactory.create(db);
+        Thread.currentThread().setContextClassLoader(previous);
+
+        /* Continue original initialization */
         G = this;
 
         try {
@@ -76,14 +108,6 @@ public class Gringotts extends JavaPlugin {
             registerCommands();
             registerEvents();
             registerEconomy();
-
-            try {
-                MetricsLite metrics = new MetricsLite(this);
-                metrics.start();
-            } catch (IOException err) {
-                log.log(Level.INFO, "Failed to submit PluginMetrics stats", err);
-            }
-
         } catch(GringottsStorageException | GringottsConfigurationException e) {
             log.severe(e.getMessage()); 
             this.disable();
@@ -221,9 +245,52 @@ public class Gringotts extends JavaPlugin {
         return EBeanDAO.getDao();
     }
 
-    @Override
-    public List<Class<?>> getDatabaseClasses() {
+    /*
+     * Note: I extracted EBean methods from Bukkit/CB directly. There *is* better solution, but I can't be arsed to
+     * deal with EBean really
+     */
+
+    /** Ebean database classes */
+    public List<Class<?>> getGringottsDatabaseClasses() {
         return EBeanDAO.getDatabaseClasses();
+    }
+
+    /** Ebean server instance */
+    public EbeanServer getGringottsDatabase() {
+        return gringottsEbeanServer;
+    }
+
+    private void installGringottsDDL() {
+        SpiEbeanServer serv = (SpiEbeanServer) getGringottsDatabase();
+        DdlGenerator gen = serv.getDdlGenerator();
+
+        gen.runScript(false, gen.generateCreateDdl());
+    }
+
+    private void removeGringottsDDL() {
+        SpiEbeanServer serv = (SpiEbeanServer) getGringottsDatabase();
+        DdlGenerator gen = serv.getDdlGenerator();
+
+        gen.runScript(true, gen.generateDropDdl());
+    }
+
+    private String replaceDatabaseString(String input) {
+        input = input.replaceAll("\\{DIR\\}", this.getDataFolder().getPath().replaceAll("\\\\", "/") + "/");
+        input = input.replaceAll("\\{NAME\\}", this.getDescription().getName().replaceAll("[^\\w_-]", ""));
+        return input;
+    }
+
+    private void configureGringottsDbConfig(ServerConfig config) {
+        Validate.notNull(config, "Config cannot be null");
+        DataSourceConfig ds = new DataSourceConfig();
+        ds.setDriver("org.sqlite.JDBC");
+        config.setDatabasePlatform(new SQLitePlatform());
+        config.getDatabasePlatform().getDbDdlSyntax().setIdentity("");
+        ds.setUrl("jdbc:sqlite:{DIR}{NAME}.db");
+        ds.setUsername("bukkit");
+        ds.setPassword("walrus");
+        ds.setIsolationLevel(TransactionIsolation.getLevel("SERIALIZABLE"));
+        config.setDataSourceConfig(ds);
     }
 
     /**
@@ -232,12 +299,12 @@ public class Gringotts extends JavaPlugin {
      */
     private void setupEBean() {
         try {
-            EbeanServer db = getDatabase();
-            for (Class<?> c : getDatabaseClasses())
+            EbeanServer db = getGringottsDatabase();
+            for (Class<?> c : getGringottsDatabaseClasses())
                 db.find(c).findRowCount();
         } catch (Exception ignored) {
             log.info("Initializing database tables.");
-            installDDL();
+            installGringottsDDL();
         }
     }
 

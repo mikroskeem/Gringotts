@@ -1,7 +1,5 @@
 package org.gestern.gringotts;
 
-import net.milkbowl.vault.item.ItemInfo;
-import net.milkbowl.vault.item.Items;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -11,12 +9,13 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.material.MaterialData;
 import org.gestern.gringotts.currency.GringottsCurrency;
+import org.gestern.gringotts.items.ItemInfo;
+import org.gestern.gringotts.items.Items;
 
 import java.util.*;
 import java.util.logging.Logger;
 
 import static org.gestern.gringotts.Util.translateColors;
-
 import static org.gestern.gringotts.dependency.Dependency.DEP;
 
 /**

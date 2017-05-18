@@ -22,7 +22,7 @@ import static org.gestern.gringotts.Configuration.CONF;
 
 public class EBeanDAO implements DAO {
 
-    private final EbeanServer db = Gringotts.G.getDatabase();
+    private final EbeanServer db = Gringotts.G.getGringottsDatabase();
     private final Logger log = Gringotts.G.getLogger();
 
     private static EBeanDAO dao;
