@@ -13,6 +13,9 @@ Note about this fork
 
 This is hacky solution to make Gringotts working on newer CraftBukkit servers.
 
+So **DO NOT TRY TO USE IT ON OLDER SERVERS**. I encountered weird behaviour and I won't look into it right now.
+Use [upstream](https://github.com/MinecraftWars/Gringotts) version instead if you intend to use it on older servers.
+
 See https://www.spigotmc.org/threads/removal-of-ebean-orm.194144/ for more details.
 
 Though I may very likely rewrite Gringotts to use H2 and HikariCP at some point, and do overall
