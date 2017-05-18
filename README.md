@@ -8,6 +8,16 @@ Gringotts is an item-based economy plugin for the Bukkit Minecraft server platfo
 
 [Get Gringotts from BukkitDev](http://dev.bukkit.org/server-mods/gringotts/)
 
+Note about this fork
+--------------------
+
+This is hacky solution to make Gringotts working on newer CraftBukkit servers.
+
+See https://www.spigotmc.org/threads/removal-of-ebean-orm.194144/ for more details.
+
+Though I may very likely rewrite Gringotts to use H2 and HikariCP at some point, and do overall
+code cleanup.
+
 Features
 --------
 * Item-backed economy (configurable, default emeralds)
